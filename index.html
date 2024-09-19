@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<title>札幌警察消防地図</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI="
+crossorigin=""/>
+ <!-- Make sure you put this AFTER Leaflet's CSS -->
+ <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
+     integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM="
+     crossorigin=""></script>
+<style>
+    #map { height: 400px; width:600px}
+</style>
+</head>
+
+<body>
+<h2>札幌市内の警察署及び消防設備の地図</h2>
+<div id="demo">icons from: <a href="https://icooon-mono.com/">icooon mono</a>.</br>
+    data from: <a href="http://www.openstreetmap.org/">OpenStreetMap</a>, retrieved using <a href="https://github.com/drolbr/Overpass-API">OverpassAPI</a>.</br>
+    ロードするのに少し時間がかかります。</div>
+<div id="map"></div>
+<script>
+    var map = L.map('map').setView([51.505, -0.09], 13);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+var marker = L.marker([51.5, -0.09]).addTo(map);
+marker.bindPopup("<b>Hello world!</b><br>I am a popup.").openPopup();
+
+keisatsu = `
+[out:json];
+node['amenity'='police']['addr:city'='札幌市'];
+out body;
+`;
+shoubou = `
+[out:json];
+node['amenity'='fire_station']['addr:city'='札幌市'];
+out body;
+`;
+
+var shoubouIcon = L.icon({
+    iconUrl: 'shoubou.png',
+    iconSize: [40, 40],
+    iconAnchor: [40, 40],
+    popupAnchor: [0, -42],
+});
+var keisatsuIcon = L.icon({
+    iconUrl: 'keisatsu.png',
+    iconSize: [40, 40],
+    iconAnchor: [40, 40],
+    popupAnchor: [0, -42],
+});
+function addmarker(tuple,iconName){
+    var marker = L.marker([tuple[1], tuple[2]],{icon:iconName}).addTo(map);
+    marker.bindPopup(`<b>${tuple[0]}</b>`).openPopup();
+}
+
+async function getstations(OSMQL, icon){
+    const requestURL = 'https://z.overpass-api.de/api/interpreter?data=' + encodeURIComponent(OSMQL);
+    const request = new Request(requestURL);
+    const response = await fetch(request);
+    const station = await response.json()
+    const elements = station['elements'];
+    var list = [];
+    elements.forEach(element => list.push([element['tags']['name:ja'],element['lat'],element['lon']]));
+    console.log(list);
+    const para = document.createElement('p');
+    const demo = document.querySelector('#demo');
+    para.textContent = `${list[0]}含めて${list.length}件`;
+    demo.appendChild(para);
+    list.forEach(el => addmarker(el,icon));
+}
+
+getstations(keisatsu,keisatsuIcon);
+getstations(shoubou,shoubouIcon)
+</script>
+</body>
+</html>
